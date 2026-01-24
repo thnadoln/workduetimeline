@@ -19,12 +19,7 @@ const GRID_ROW_HEIGHT = 340;
 type ViewMode = 'line' | 'grid';
 type ThemeKey = 'slate' | 'indigo' | 'emerald';
 
-const THEMES: Record<ThemeKey, { 
-  name: string, primary: string, primaryHover: string, containerBg: string,
-  cardBg: string, itemBg: string, headerBg: string, light: string, text: string, 
-  mutedText: string, shadow: string, borderLight: string, ring: string, 
-  focusBorder: string, barBorder: string
-}> = {
+const THEMES = {
   slate: {
     name: 'Neutral Slate', primary: 'bg-slate-800', primaryHover: 'hover:bg-slate-900', containerBg: 'bg-slate-100', cardBg: 'bg-slate-50', headerBg: 'bg-slate-50/80', itemBg: 'bg-slate-200/30', light: 'bg-slate-100', text: 'text-slate-900', mutedText: 'text-slate-400', shadow: 'shadow-slate-200/50', borderLight: 'border-slate-200/60', ring: 'focus:ring-slate-800', focusBorder: 'focus:border-slate-800', barBorder: 'border-l-slate-800'
   },
@@ -34,7 +29,9 @@ const THEMES: Record<ThemeKey, {
   emerald: {
     name: 'Fresh Emerald', primary: 'bg-emerald-600', primaryHover: 'hover:bg-emerald-700', containerBg: 'bg-emerald-50/80', cardBg: 'bg-emerald-50/60', headerBg: 'bg-emerald-50/80', itemBg: 'bg-emerald-100/30', light: 'bg-emerald-100/50', text: 'text-emerald-900', mutedText: 'text-emerald-400', shadow: 'shadow-emerald-200/40', borderLight: 'border-emerald-200/40', ring: 'focus:ring-emerald-600', focusBorder: 'focus:border-emerald-600', barBorder: 'border-l-emerald-600'
   }
-};
+} as const;
+
+type Theme = typeof THEMES[keyof typeof THEMES];
 
 const App: React.FC = () => {
   const [dates, setDates] = useState<DateItem[]>(getInitialDates());
@@ -73,7 +70,6 @@ const App: React.FC = () => {
   const t = THEMES[themeKey];
 
   const gridColumnWidth = useMemo(() => (containerWidth - 80) / 14, [containerWidth]);
-  const currentColumnWidth = viewMode === 'line' ? LINE_COLUMN_WIDTH : gridColumnWidth;
 
   useEffect(() => {
     const handleResize = () => {
@@ -95,8 +91,9 @@ const App: React.FC = () => {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!resizingEventId) return;
+      const currentWidth = viewMode === 'line' ? LINE_COLUMN_WIDTH : gridColumnWidth;
       const deltaX = e.clientX - initialX.current;
-      const daysDelta = Math.round(deltaX / currentColumnWidth);
+      const daysDelta = Math.round(deltaX / currentWidth);
       const currentEvent = events.find(ev => ev.id === resizingEventId);
       if (!currentEvent) return;
       const newEndDate = format(addDays(parseISODate(initialEndDate.current), daysDelta), 'yyyy-MM-dd');
@@ -112,7 +109,7 @@ const App: React.FC = () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [resizingEventId, events, currentColumnWidth]);
+  }, [resizingEventId, events, gridColumnWidth, viewMode]);
 
   const scrollToToday = useCallback(() => {
     if (scrollContainerRef.current) {
@@ -237,7 +234,7 @@ const App: React.FC = () => {
               </div>
               <div className="hidden sm:block">
                 <h1 className={`text-lg sm:text-2xl font-black ${t.text} tracking-tight leading-none`}>Timeline</h1>
-                <p className={`text-[8px] sm:text-[10px] font-bold ${t.mutedText} uppercase tracking-widest mt-1 sm:mt-1.5`}>Fluid Architecture</p>
+                <p className={`text-[8px] sm:text-[10px] font-bold ${t.mutedText} uppercase tracking-widest mt-1 sm:mt-1.5`}>Vercel Optimized</p>
               </div>
             </div>
             
@@ -285,7 +282,7 @@ const App: React.FC = () => {
                         <div key={event.id} className={`absolute pointer-events-none ${lastCreatedEventId === event.id ? 'animate-create-event' : ''}`}
                           style={{ left: `${left}px`, top: `${slot * (EVENT_HEIGHT + EVENT_GAP)}px`, height: `${EVENT_HEIGHT}px`, width: `${Math.max(width, 10)}px` }}
                         >
-                          <EventBar event={event} isSingleDay={duration === 1} onRemove={(id, e) => { e.stopPropagation(); setEvents(prev => prev.filter(ev => ev.id !== id)); }} onEdit={handleEditEvent} onResize={(ev, e) => { e.stopPropagation(); setResizingEventId(ev.id); initialX.current = e.clientX; initialEndDate.current = ev.endDate; }} themeStyles={t} isResizing={resizingEventId === event.id} currentColumnWidth={LINE_COLUMN_WIDTH} />
+                          <EventBar event={event} isSingleDay={duration === 1} onRemove={(id, e) => { e.stopPropagation(); setEvents(prev => prev.filter(ev => ev.id !== id)); }} onEdit={handleEditEvent} onResize={(ev, e) => { e.stopPropagation(); setResizingEventId(ev.id); initialX.current = e.clientX; initialEndDate.current = ev.endDate; }} themeStyles={t} isResizing={resizingEventId === event.id} />
                         </div>
                       );
                     })}
@@ -323,7 +320,7 @@ const App: React.FC = () => {
                               <div key={`${event.id}-${rowIdx}`} className={`absolute pointer-events-none ${lastCreatedEventId === event.id ? 'animate-create-event' : ''}`}
                                 style={{ left: `${startX}px`, top: `${slot * (EVENT_HEIGHT + EVENT_GAP)}px`, height: `${EVENT_HEIGHT}px`, width: `${Math.max(endX - startX, 10)}px` }}
                               >
-                                <EventBar event={event} isSingleDay={event.startDate === event.endDate} isSplitStart={startIndex === -1} isSplitEnd={endIndex === -1} onRemove={(id, e) => { e.stopPropagation(); setEvents(prev => prev.filter(ev => ev.id !== id)); }} onEdit={handleEditEvent} onResize={(ev, e) => { e.stopPropagation(); setResizingEventId(ev.id); initialX.current = e.clientX; initialEndDate.current = ev.endDate; }} themeStyles={t} isResizing={resizingEventId === event.id} currentColumnWidth={gridColumnWidth} />
+                                <EventBar event={event} isSingleDay={event.startDate === event.endDate} isSplitStart={startIndex === -1} isSplitEnd={endIndex === -1} onRemove={(id, e) => { e.stopPropagation(); setEvents(prev => prev.filter(ev => ev.id !== id)); }} onEdit={handleEditEvent} onResize={(ev, e) => { e.stopPropagation(); setResizingEventId(ev.id); initialX.current = e.clientX; initialEndDate.current = ev.endDate; }} themeStyles={t} isResizing={resizingEventId === event.id} />
                               </div>
                             );
                           })}
@@ -376,11 +373,19 @@ const App: React.FC = () => {
   );
 };
 
-const EventBar: React.FC<{ 
-  event: TimelineEvent, isSingleDay: boolean, isSplitStart?: boolean, isSplitEnd?: boolean, 
-  onRemove: (id: string, e: React.MouseEvent) => void, onEdit: (event: TimelineEvent, e: React.MouseEvent) => void, onResize: (event: TimelineEvent, e: React.MouseEvent) => void, 
-  themeStyles: any, isResizing: boolean, currentColumnWidth: number
-}> = ({ event, isSingleDay, isSplitStart, isSplitEnd, onRemove, onEdit, onResize, themeStyles: t, isResizing, currentColumnWidth }) => {
+interface EventBarProps {
+  event: TimelineEvent;
+  isSingleDay: boolean;
+  isSplitStart?: boolean;
+  isSplitEnd?: boolean;
+  onRemove: (id: string, e: React.MouseEvent) => void;
+  onEdit: (event: TimelineEvent, e: React.MouseEvent) => void;
+  onResize: (event: TimelineEvent, e: React.MouseEvent) => void;
+  themeStyles: Theme;
+  isResizing: boolean;
+}
+
+const EventBar: React.FC<EventBarProps> = ({ event, isSingleDay, isSplitStart, isSplitEnd, onRemove, onEdit, onResize, themeStyles: t, isResizing }) => {
   return (
     <div className={`relative h-full flex items-center group transition-transform ${isResizing ? 'scale-y-[1.1]' : ''}`}>
       {!isSingleDay && (
