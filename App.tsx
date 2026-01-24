@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { X, Calendar as CalendarIcon, ArrowRight, Trash2, ZoomIn, ZoomOut, Maximize2, Minimize2, Plus, Target } from 'lucide-react';
+import { X, Calendar as CalendarIcon, ArrowRight, Trash2, ZoomIn, ZoomOut, Maximize2, Minimize2, Target } from 'lucide-react';
 import { format, addDays, isBefore, differenceInDays } from 'date-fns';
 import { DateItem, TimelineEvent } from './types';
 import { generateDates, getInitialDates } from './utils/dateUtils';
@@ -20,21 +20,10 @@ type ViewMode = 'line' | 'grid';
 type ThemeKey = 'slate' | 'indigo' | 'emerald';
 
 const THEMES: Record<ThemeKey, { 
-  name: string, 
-  primary: string, 
-  primaryHover: string, 
-  containerBg: string,
-  cardBg: string,
-  itemBg: string,
-  headerBg: string,
-  light: string, 
-  text: string, 
-  mutedText: string,
-  shadow: string, 
-  borderLight: string,
-  ring: string,
-  focusBorder: string,
-  barBorder: string
+  name: string, primary: string, primaryHover: string, containerBg: string,
+  cardBg: string, itemBg: string, headerBg: string, light: string, text: string, 
+  mutedText: string, shadow: string, borderLight: string, ring: string, 
+  focusBorder: string, barBorder: string
 }> = {
   slate: {
     name: 'Neutral Slate', primary: 'bg-slate-800', primaryHover: 'hover:bg-slate-900', containerBg: 'bg-slate-100', cardBg: 'bg-slate-50', headerBg: 'bg-slate-50/80', itemBg: 'bg-slate-200/30', light: 'bg-slate-100', text: 'text-slate-900', mutedText: 'text-slate-400', shadow: 'shadow-slate-200/50', borderLight: 'border-slate-200/60', ring: 'focus:ring-slate-800', focusBorder: 'focus:border-slate-800', barBorder: 'border-l-slate-800'
@@ -54,13 +43,17 @@ const App: React.FC = () => {
   const mainContainerRef = useRef<HTMLDivElement>(null);
 
   const [themeKey, setThemeKey] = useState<ThemeKey>(() => {
-    const saved = localStorage.getItem('timeline_theme_v12');
-    return (saved as ThemeKey) || 'slate';
+    try {
+      const saved = localStorage.getItem('timeline_theme_v12');
+      return (saved as ThemeKey) || 'slate';
+    } catch { return 'slate'; }
   });
   
   const [events, setEvents] = useState<TimelineEvent[]>(() => {
-    const saved = localStorage.getItem('timeline_events_v12');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('timeline_events_v12');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
   });
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -79,23 +72,25 @@ const App: React.FC = () => {
 
   const t = THEMES[themeKey];
 
-  // Dynamically calculate grid column width to ensure 14 columns always fit
   const gridColumnWidth = useMemo(() => (containerWidth - 80) / 14, [containerWidth]);
   const currentColumnWidth = viewMode === 'line' ? LINE_COLUMN_WIDTH : gridColumnWidth;
 
   useEffect(() => {
     const handleResize = () => {
-      if (mainContainerRef.current) {
-        setContainerWidth(mainContainerRef.current.offsetWidth);
-      }
+      if (mainContainerRef.current) setContainerWidth(mainContainerRef.current.offsetWidth);
     };
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => localStorage.setItem('timeline_events_v12', JSON.stringify(events)), [events]);
-  useEffect(() => localStorage.setItem('timeline_theme_v12', themeKey), [themeKey]);
+  useEffect(() => {
+    try { localStorage.setItem('timeline_events_v12', JSON.stringify(events)); } catch (e) { console.error("Storage failed", e); }
+  }, [events]);
+
+  useEffect(() => {
+    try { localStorage.setItem('timeline_theme_v12', themeKey); } catch (e) { console.error("Storage failed", e); }
+  }, [themeKey]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -235,14 +230,14 @@ const App: React.FC = () => {
       <section className="h-screen w-full flex flex-col snap-start relative items-center justify-center p-4 sm:p-12">
         <div ref={mainContainerRef} className={`w-full max-w-[1440px] h-full max-h-[85vh] ${t.containerBg} rounded-[2.5rem] sm:rounded-[4rem] shadow-2xl ${t.shadow} border ${t.borderLight} flex flex-col overflow-hidden relative transition-all duration-700`}>
           
-          <header className={`h-16 sm:h-20 px-6 sm:px-10 ${t.headerBg} backdrop-blur-md border-b ${t.borderLight} flex items-center justify-between shrink-0 z-40`}>
+          <header className={`h-16 sm:h-20 px-6 sm:px-10 ${t.headerBg} backdrop-blur-md border-b ${t.borderLight} flex items-center justify-between shrink-0 z-40 transition-colors duration-700`}>
             <div className="flex items-center gap-4">
               <div className={`p-2 sm:p-2.5 ${t.primary} rounded-xl sm:rounded-2xl shadow-lg ${t.shadow}`}>
                 <CalendarIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
               <div className="hidden sm:block">
                 <h1 className={`text-lg sm:text-2xl font-black ${t.text} tracking-tight leading-none`}>Timeline</h1>
-                <p className={`text-[8px] sm:text-[10px] font-bold ${t.mutedText} uppercase tracking-widest mt-1 sm:mt-1.5`}>Fluid Responsive Grid</p>
+                <p className={`text-[8px] sm:text-[10px] font-bold ${t.mutedText} uppercase tracking-widest mt-1 sm:mt-1.5`}>Fluid Architecture</p>
               </div>
             </div>
             
@@ -283,12 +278,11 @@ const App: React.FC = () => {
 
                       const duration = differenceInDays(parseISODate(event.endDate), parseISODate(event.startDate)) + 1;
                       const slot = eventSlots[event.id] ?? 0;
-                      
                       const left = (startIndex * LINE_COLUMN_WIDTH) + (LINE_COLUMN_WIDTH / 2);
                       const width = (endIndex - startIndex) * LINE_COLUMN_WIDTH;
 
                       return (
-                        <div key={event.id} className={`absolute pointer-events-none ${lastCreatedEventId === event.id ? 'animate-fall-down' : ''}`}
+                        <div key={event.id} className={`absolute pointer-events-none ${lastCreatedEventId === event.id ? 'animate-create-event' : ''}`}
                           style={{ left: `${left}px`, top: `${slot * (EVENT_HEIGHT + EVENT_GAP)}px`, height: `${EVENT_HEIGHT}px`, width: `${Math.max(width, 10)}px` }}
                         >
                           <EventBar event={event} isSingleDay={duration === 1} onRemove={(id, e) => { e.stopPropagation(); setEvents(prev => prev.filter(ev => ev.id !== id)); }} onEdit={handleEditEvent} onResize={(ev, e) => { e.stopPropagation(); setResizingEventId(ev.id); initialX.current = e.clientX; initialEndDate.current = ev.endDate; }} themeStyles={t} isResizing={resizingEventId === event.id} currentColumnWidth={LINE_COLUMN_WIDTH} />
@@ -321,13 +315,12 @@ const App: React.FC = () => {
                             const startIndex = row.findIndex(d => d.id === event.startDate);
                             const endIndex = row.findIndex(d => d.id === event.endDate);
                             const slot = eventSlots[event.id] ?? 0;
-
                             const rowWidth = gridColumnWidth * 14;
                             const startX = startIndex === -1 ? 0 : (startIndex * gridColumnWidth) + (gridColumnWidth / 2);
                             const endX = endIndex === -1 ? rowWidth : (endIndex * gridColumnWidth) + (gridColumnWidth / 2);
                             
                             return (
-                              <div key={`${event.id}-${rowIdx}`} className={`absolute pointer-events-none ${lastCreatedEventId === event.id ? 'animate-fall-down' : ''}`}
+                              <div key={`${event.id}-${rowIdx}`} className={`absolute pointer-events-none ${lastCreatedEventId === event.id ? 'animate-create-event' : ''}`}
                                 style={{ left: `${startX}px`, top: `${slot * (EVENT_HEIGHT + EVENT_GAP)}px`, height: `${EVENT_HEIGHT}px`, width: `${Math.max(endX - startX, 10)}px` }}
                               >
                                 <EventBar event={event} isSingleDay={event.startDate === event.endDate} isSplitStart={startIndex === -1} isSplitEnd={endIndex === -1} onRemove={(id, e) => { e.stopPropagation(); setEvents(prev => prev.filter(ev => ev.id !== id)); }} onEdit={handleEditEvent} onResize={(ev, e) => { e.stopPropagation(); setResizingEventId(ev.id); initialX.current = e.clientX; initialEndDate.current = ev.endDate; }} themeStyles={t} isResizing={resizingEventId === event.id} currentColumnWidth={gridColumnWidth} />
@@ -359,7 +352,7 @@ const App: React.FC = () => {
             <div className="p-8 pt-4 space-y-5">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Event Title</label>
-                <input type="text" value={newEventTitle} onChange={(e) => setNewEventTitle(e.target.value)} placeholder="Summer Vacation..." autoFocus className={`w-full px-6 py-4 bg-black/5 border-2 border-transparent rounded-2xl ${t.focusBorder} transition-all font-bold text-lg focus:outline-none`} />
+                <input type="text" value={newEventTitle} onChange={(e) => setNewEventTitle(e.target.value)} placeholder="Title..." autoFocus className={`w-full px-6 py-4 bg-black/5 border-2 border-transparent rounded-2xl ${t.focusBorder} transition-all font-bold text-lg focus:outline-none`} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
