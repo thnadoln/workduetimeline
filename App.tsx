@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { X, Calendar as CalendarIcon, ArrowRight, Trash2, ZoomIn, ZoomOut, Maximize2, Minimize2, Target } from 'lucide-react';
 import { format, addDays, isBefore, differenceInDays } from 'date-fns';
-import { DateItem, TimelineEvent } from './types';
+import type { DateItem, TimelineEvent } from './types';
 import { generateDates, getInitialDates } from './utils/dateUtils';
 
 const parseISODate = (s: string) => {
