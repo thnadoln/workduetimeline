@@ -1,0 +1,5 @@
+{
+  "name": "Infinite Year Timeline",
+  "description": "A horizontal, infinite-scrolling timeline that allows users to track dates, highlight weekends, and add events via double-click.",
+  "requestFramePermissions": []
+}
