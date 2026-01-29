@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { X, Calendar as CalendarIcon, ArrowRight, Trash2, ZoomIn, ZoomOut, Maximize2, Minimize2, Target } from 'lucide-react';
+import { X, Calendar as CalendarIcon, ArrowRight, Trash2, Maximize2, Minimize2, Target, ZoomIn, ZoomOut } from 'lucide-react';
 import { format, addDays, isBefore, differenceInDays } from 'date-fns';
 import type { DateItem, TimelineEvent } from './types';
 import { generateDates, getInitialDates } from './utils/dateUtils';
@@ -10,10 +10,10 @@ const parseISODate = (s: string) => {
 };
 
 const LINE_COLUMN_WIDTH = 96; 
+const GRID_ROW_HEIGHT = 340; 
 const EVENT_HEIGHT = 44;
 const EVENT_GAP = 8;
 const TIMELINE_START_OFFSET = 180;
-const GRID_ROW_HEIGHT = 340; 
 
 type ViewMode = 'line' | 'grid';
 type ThemeKey = 'slate' | 'indigo' | 'emerald';
@@ -111,17 +111,24 @@ const App: React.FC = () => {
   }, [resizingEventId, events, gridColumnWidth, viewMode]);
 
   const scrollToToday = useCallback(() => {
-    if (scrollContainerRef.current) {
-      const todayEl = document.getElementById('today-indicator-container');
-      if (todayEl) {
-        todayEl.scrollIntoView({ behavior: isInitialScrollDone.current ? 'smooth' : 'auto', inline: 'center', block: 'center' });
-        isInitialScrollDone.current = true;
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const todayEl = document.getElementById('today-indicator-container');
+    if (todayEl) {
+      if (viewMode === 'line') {
+        const centerOffset = (container.clientWidth / 2) - (LINE_COLUMN_WIDTH / 2);
+        container.scrollTo({ left: todayEl.offsetLeft - centerOffset, behavior: isInitialScrollDone.current ? 'smooth' : 'auto' });
+      } else {
+        const centerOffset = (container.clientHeight / 2) - (GRID_ROW_HEIGHT / 2);
+        container.scrollTo({ top: todayEl.offsetTop - centerOffset, behavior: isInitialScrollDone.current ? 'smooth' : 'auto' });
       }
+      isInitialScrollDone.current = true;
     }
-  }, []);
+  }, [viewMode]);
 
   useEffect(() => { 
-    const timer = setTimeout(scrollToToday, 100); 
+    const timer = setTimeout(scrollToToday, 200); 
     return () => clearTimeout(timer);
   }, [dates, viewMode, scrollToToday]);
 
@@ -169,6 +176,14 @@ const App: React.FC = () => {
     setEndDateStr(event.endDate);
     setNewEventTitle(event.title);
     setIsModalOpen(true);
+  };
+
+  const handleDeleteEvent = () => {
+    if (editingEventId) {
+      setEvents(prev => prev.filter(e => e.id !== editingEventId));
+      setIsModalOpen(false);
+      setEditingEventId(null);
+    }
   };
 
   const handleSaveEvent = () => {
@@ -222,18 +237,18 @@ const App: React.FC = () => {
   }, [dates]);
 
   return (
-    <div className={`w-full bg-slate-100 overflow-x-hidden overflow-y-auto h-screen snap-y snap-mandatory font-sans select-none scroll-smooth ${resizingEventId ? 'cursor-col-resize' : ''}`}>
-      <section className="h-screen w-full flex flex-col snap-start relative items-center justify-center p-4 sm:p-12">
-        <div ref={mainContainerRef} className={`w-full max-w-[1440px] h-full max-h-[85vh] ${t.containerBg} rounded-[2.5rem] sm:rounded-[4rem] shadow-2xl ${t.shadow} border ${t.borderLight} flex flex-col overflow-hidden relative transition-all duration-700`}>
+    <div className={`w-full bg-slate-100 overflow-x-hidden overflow-y-auto h-screen font-sans select-none scroll-smooth ${resizingEventId ? 'cursor-col-resize' : ''}`}>
+      <section className="h-screen w-full flex flex-col items-center justify-center p-4 sm:p-12">
+        <div ref={mainContainerRef} className={`w-full max-w-[1440px] h-full max-h-[85vh] ${t.containerBg} rounded-[2.5rem] sm:rounded-[4rem] shadow-2xl border ${t.borderLight} flex flex-col overflow-hidden relative transition-all duration-700`}>
           
           <header className={`h-16 sm:h-20 px-6 sm:px-10 ${t.headerBg} backdrop-blur-md border-b ${t.borderLight} flex items-center justify-between shrink-0 z-40 transition-colors duration-700`}>
             <div className="flex items-center gap-4">
-              <div className={`p-2 sm:p-2.5 ${t.primary} rounded-xl sm:rounded-2xl shadow-lg ${t.shadow}`}>
+              <div className={`p-2 sm:p-2.5 ${t.primary} rounded-xl sm:rounded-2xl shadow-lg`}>
                 <CalendarIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
               <div className="hidden sm:block">
                 <h1 className={`text-lg sm:text-2xl font-black ${t.text} tracking-tight leading-none`}>Timeline</h1>
-                <p className={`text-[8px] sm:text-[10px] font-bold ${t.mutedText} uppercase tracking-widest mt-1 sm:mt-1.5`}>Vercel Optimized</p>
+                <p className={`text-[8px] sm:text-[10px] font-bold ${t.mutedText} uppercase tracking-widest mt-1 sm:mt-1.5`}>Production Ready</p>
               </div>
             </div>
             
@@ -259,7 +274,7 @@ const App: React.FC = () => {
                       className={`flex-none w-24 flex flex-col items-center pt-24 border-r ${t.borderLight} transition-colors duration-700 relative ${dateItem.isWeekend ? t.itemBg : 'bg-transparent'} hover:bg-black/5 cursor-crosshair z-0`}
                     >
                       <span className={`text-[10px] uppercase tracking-widest font-black mb-2 ${dateItem.isToday ? t.text : 'text-gray-300'}`}>{dateItem.dayName}</span>
-                      <div className={`flex items-center justify-center rounded-2xl transition-all duration-700 text-2xl font-black ${dateItem.isToday ? `${t.primary} text-white w-14 h-14 shadow-xl ${t.shadow}` : `w-12 h-12 ${t.text} opacity-70`}`}>
+                      <div className={`flex items-center justify-center rounded-2xl transition-all duration-700 text-2xl font-black ${dateItem.isToday ? `${t.primary} text-white w-14 h-14 shadow-xl` : `w-12 h-12 ${t.text} opacity-70`}`}>
                         {dateItem.dayNumber}
                       </div>
                       <div className={`absolute top-[190px] inset-x-0 h-[1px] ${t.borderLight} -z-10`}></div>
@@ -272,16 +287,15 @@ const App: React.FC = () => {
                       const endIndex = dates.findIndex(d => d.id === event.endDate);
                       if (startIndex === -1 || endIndex === -1) return null;
 
-                      const duration = differenceInDays(parseISODate(event.endDate), parseISODate(event.startDate)) + 1;
                       const slot = eventSlots[event.id] ?? 0;
                       const left = (startIndex * LINE_COLUMN_WIDTH) + (LINE_COLUMN_WIDTH / 2);
-                      const width = (endIndex - startIndex) * LINE_COLUMN_WIDTH;
+                      const visualWidth = (endIndex - startIndex) * LINE_COLUMN_WIDTH;
 
                       return (
                         <div key={event.id} className={`absolute pointer-events-none ${lastCreatedEventId === event.id ? 'animate-create-event' : ''}`}
-                          style={{ left: `${left}px`, top: `${slot * (EVENT_HEIGHT + EVENT_GAP)}px`, height: `${EVENT_HEIGHT}px`, width: `${Math.max(width, 10)}px` }}
+                          style={{ left: `${left}px`, top: `${slot * (EVENT_HEIGHT + EVENT_GAP)}px`, height: `${EVENT_HEIGHT}px`, width: `${Math.max(visualWidth, 20)}px` }}
                         >
-                          <EventBar event={event} isSingleDay={duration === 1} onRemove={(id, e) => { e.stopPropagation(); setEvents(prev => prev.filter(ev => ev.id !== id)); }} onEdit={handleEditEvent} onResize={(ev, e) => { e.stopPropagation(); setResizingEventId(ev.id); initialX.current = e.clientX; initialEndDate.current = ev.endDate; }} themeStyles={t} isResizing={resizingEventId === event.id} />
+                          <EventBar event={event} onEdit={handleEditEvent} onResize={(ev, e) => { e.stopPropagation(); setResizingEventId(ev.id); initialX.current = e.clientX; initialEndDate.current = ev.endDate; }} themeStyles={t} isResizing={resizingEventId === event.id} />
                         </div>
                       );
                     })}
@@ -293,7 +307,7 @@ const App: React.FC = () => {
                     const rowStartID = row[0]?.id;
                     const rowEndID = row[row.length - 1]?.id;
                     return (
-                      <div key={rowIdx} className={`w-full max-w-[1300px] flex-none relative ${t.cardBg} border ${t.borderLight} rounded-[3rem] shadow-xl ${t.shadow} mb-20 overflow-hidden transition-all duration-700`} style={{ height: `${GRID_ROW_HEIGHT}px` }}>
+                      <div key={rowIdx} className={`w-full max-w-[1300px] flex-none relative ${t.cardBg} border ${t.borderLight} rounded-[3rem] shadow-xl mb-20 overflow-hidden transition-all duration-700`} style={{ height: `${GRID_ROW_HEIGHT}px` }}>
                         <div className={`flex h-full border-b ${t.borderLight}`}>
                           {row.map((dateItem) => (
                             <div key={dateItem.id} id={dateItem.isToday ? 'today-indicator-container' : undefined} onDoubleClick={() => handleDateDoubleClick(dateItem)} 
@@ -301,7 +315,7 @@ const App: React.FC = () => {
                               className={`flex-none flex flex-col items-center pt-10 border-r ${t.borderLight} last:border-r-0 transition-colors relative ${dateItem.isWeekend ? t.itemBg : 'bg-transparent'} hover:bg-black/5 cursor-crosshair`}
                             >
                               <span className={`text-[9px] sm:text-[10px] uppercase tracking-[0.2em] font-black mb-1 ${dateItem.isToday ? t.text : 'text-gray-300'}`}>{dateItem.dayName}</span>
-                              <div className={`flex items-center justify-center rounded-2xl transition-all duration-700 text-sm sm:text-xl font-black ${dateItem.isToday ? `${t.primary} text-white w-8 h-8 sm:w-12 sm:h-12 shadow-lg ${t.shadow}` : `w-8 h-8 sm:w-10 sm:h-10 ${t.text} opacity-60`}`}>{dateItem.dayNumber}</div>
+                              <div className={`flex items-center justify-center rounded-2xl transition-all duration-700 text-sm sm:text-xl font-black ${dateItem.isToday ? `${t.primary} text-white w-8 h-8 sm:w-12 sm:h-12 shadow-lg` : `w-8 h-8 sm:w-10 sm:h-10 ${t.text} opacity-60`}`}>{dateItem.dayNumber}</div>
                             </div>
                           ))}
                         </div>
@@ -317,9 +331,9 @@ const App: React.FC = () => {
                             
                             return (
                               <div key={`${event.id}-${rowIdx}`} className={`absolute pointer-events-none ${lastCreatedEventId === event.id ? 'animate-create-event' : ''}`}
-                                style={{ left: `${startX}px`, top: `${slot * (EVENT_HEIGHT + EVENT_GAP)}px`, height: `${EVENT_HEIGHT}px`, width: `${Math.max(endX - startX, 10)}px` }}
+                                style={{ left: `${startX}px`, top: `${slot * (EVENT_HEIGHT + EVENT_GAP)}px`, height: `${EVENT_HEIGHT}px`, width: `${Math.max(endX - startX, 20)}px` }}
                               >
-                                <EventBar event={event} isSingleDay={event.startDate === event.endDate} isSplitStart={startIndex === -1} isSplitEnd={endIndex === -1} onRemove={(id, e) => { e.stopPropagation(); setEvents(prev => prev.filter(ev => ev.id !== id)); }} onEdit={handleEditEvent} onResize={(ev, e) => { e.stopPropagation(); setResizingEventId(ev.id); initialX.current = e.clientX; initialEndDate.current = ev.endDate; }} themeStyles={t} isResizing={resizingEventId === event.id} />
+                                <EventBar event={event} isSplitStart={startIndex === -1} isSplitEnd={endIndex === -1} onEdit={handleEditEvent} onResize={(ev, e) => { e.stopPropagation(); setResizingEventId(ev.id); initialX.current = e.clientX; initialEndDate.current = ev.endDate; }} themeStyles={t} isResizing={resizingEventId === event.id} />
                               </div>
                             );
                           })}
@@ -347,8 +361,8 @@ const App: React.FC = () => {
             </div>
             <div className="p-8 pt-4 space-y-5">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Event Title</label>
-                <input type="text" value={newEventTitle} onChange={(e) => setNewEventTitle(e.target.value)} placeholder="Title..." autoFocus className={`w-full px-6 py-4 bg-black/5 border-2 border-transparent rounded-2xl ${t.focusBorder} transition-all font-bold text-lg focus:outline-none`} />
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Event Title (15 chars limit)</label>
+                <input type="text" value={newEventTitle} onChange={(e) => setNewEventTitle(e.target.value.substring(0, 15))} placeholder="Title..." autoFocus className={`w-full px-6 py-4 bg-black/5 border-2 border-transparent rounded-2xl ${t.focusBorder} transition-all font-bold text-lg focus:outline-none`} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -361,9 +375,16 @@ const App: React.FC = () => {
                 </div>
               </div>
             </div>
-            <div className="p-8 flex gap-4 bg-black/5">
-              <button onClick={() => setIsModalOpen(false)} className="flex-1 py-4 font-bold text-gray-500 hover:text-gray-900 transition-colors">Cancel</button>
-              <button onClick={handleSaveEvent} className={`flex-[2] py-4 ${t.primary} text-white font-black rounded-2xl shadow-lg flex items-center justify-center gap-2 hover:brightness-110 active:scale-95 transition-all`}>Save Event <ArrowRight size={18} /></button>
+            <div className="p-8 flex items-center justify-between gap-4 bg-black/5">
+              <div className="flex gap-4">
+                <button onClick={() => setIsModalOpen(false)} className="py-4 px-4 font-bold text-gray-500 hover:text-gray-900 transition-colors">Cancel</button>
+                {editingEventId && (
+                  <button onClick={handleDeleteEvent} className="p-4 text-red-500 hover:bg-red-50 rounded-2xl transition-colors" title="Delete Event">
+                    <Trash2 size={24} />
+                  </button>
+                )}
+              </div>
+              <button onClick={handleSaveEvent} className={`flex-1 py-4 ${t.primary} text-white font-black rounded-2xl shadow-lg flex items-center justify-center gap-2 hover:brightness-110 active:scale-95 transition-all`}>Save <ArrowRight size={18} /></button>
             </div>
           </div>
         </div>
@@ -374,23 +395,22 @@ const App: React.FC = () => {
 
 interface EventBarProps {
   event: TimelineEvent;
-  isSingleDay: boolean;
   isSplitStart?: boolean;
   isSplitEnd?: boolean;
-  onRemove: (id: string, e: React.MouseEvent) => void;
   onEdit: (event: TimelineEvent, e: React.MouseEvent) => void;
   onResize: (event: TimelineEvent, e: React.MouseEvent) => void;
   themeStyles: Theme;
   isResizing: boolean;
 }
 
-const EventBar: React.FC<EventBarProps> = ({ event, isSingleDay, isSplitStart, isSplitEnd, onRemove, onEdit, onResize, themeStyles: t, isResizing }) => {
+const EventBar: React.FC<EventBarProps> = ({ event, isSplitStart, isSplitEnd, onEdit, onResize, themeStyles: t, isResizing }) => {
+  const truncatedTitle = useMemo(() => {
+    return event.title.length > 15 ? event.title.substring(0, 15) : event.title;
+  }, [event.title]);
+
   return (
     <div className={`relative h-full flex items-center group transition-transform ${isResizing ? 'scale-y-[1.1]' : ''}`}>
-      {!isSingleDay && (
-        <div className={`absolute inset-y-[20%] left-0 right-0 ${t.primary} opacity-[0.1] rounded-full pointer-events-none`} />
-      )}
-
+      {/* Main Bubble */}
       <div 
         onClick={(e) => onEdit(event, e)}
         className={`absolute left-0 z-10 h-full flex items-center pointer-events-auto cursor-pointer ${t.containerBg} border border-black/10 px-4 py-1 shadow-md border-l-4 ${t.barBorder} transition-all 
@@ -398,15 +418,19 @@ const EventBar: React.FC<EventBarProps> = ({ event, isSingleDay, isSplitStart, i
           ${isSplitEnd ? 'rounded-r-none' : 'rounded-r-2xl'}
           group-hover:shadow-lg group-hover:scale-[1.02]
         `}
-        style={{ width: 'max-content', minWidth: '40px', maxWidth: '100%' }}
+        style={{ width: 'max-content', minWidth: 'max-content' }}
       >
-        <div className="flex items-center gap-3 whitespace-nowrap overflow-hidden">
-          <span className={`text-[12px] font-black ${t.text} uppercase tracking-tight truncate`}>{event.title}</span>
-          <button onClick={(e) => onRemove(event.id, e)} className="p-1 opacity-0 group-hover:opacity-100 hover:bg-red-50 text-red-500 rounded-lg transition-all shrink-0"><Trash2 size={12} /></button>
+        <div className="flex items-center gap-3 whitespace-nowrap overflow-hidden pr-2">
+          <span className={`text-[12px] font-black ${t.text} uppercase tracking-tight`}>{truncatedTitle}</span>
         </div>
         
-        {!isSplitEnd && !isSingleDay && (
-          <div onMouseDown={(e) => onResize(event, e)} className="absolute right-[-8px] inset-y-0 w-4 cursor-col-resize group/handle flex items-center justify-center">
+        {/* Drag out handle */}
+        {!isSplitEnd && (
+          <div 
+            onMouseDown={(e) => onResize(event, e)} 
+            className="absolute right-0 inset-y-0 w-6 cursor-col-resize group/handle flex items-center justify-end z-20 pointer-events-auto pr-1"
+            title="Drag to extend"
+          >
             <div className={`w-1 h-1/2 rounded-full ${t.primary} opacity-20 group-hover/handle:opacity-100 transition-all`} />
           </div>
         )}
