@@ -128,7 +128,7 @@ const App: React.FC = () => {
   }, [viewMode]);
 
   useEffect(() => { 
-    const timer = setTimeout(scrollToToday, 200); 
+    const timer = setTimeout(scrollToToday, 250); 
     return () => clearTimeout(timer);
   }, [dates, viewMode, scrollToToday]);
 
@@ -248,7 +248,7 @@ const App: React.FC = () => {
               </div>
               <div className="hidden sm:block">
                 <h1 className={`text-lg sm:text-2xl font-black ${t.text} tracking-tight leading-none`}>Timeline</h1>
-                <p className={`text-[8px] sm:text-[10px] font-bold ${t.mutedText} uppercase tracking-widest mt-1 sm:mt-1.5`}>Production Ready</p>
+                <p className={`text-[8px] sm:text-[10px] font-bold ${t.mutedText} uppercase tracking-widest mt-1 sm:mt-1.5`}>Vite Optimized</p>
               </div>
             </div>
             
@@ -361,8 +361,16 @@ const App: React.FC = () => {
             </div>
             <div className="p-8 pt-4 space-y-5">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Event Title (15 chars limit)</label>
-                <input type="text" value={newEventTitle} onChange={(e) => setNewEventTitle(e.target.value.substring(0, 15))} placeholder="Title..." autoFocus className={`w-full px-6 py-4 bg-black/5 border-2 border-transparent rounded-2xl ${t.focusBorder} transition-all font-bold text-lg focus:outline-none`} />
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Event Title (15 chars max)</label>
+                <input 
+                  type="text" 
+                  maxLength={15}
+                  value={newEventTitle} 
+                  onChange={(e) => setNewEventTitle(e.target.value)} 
+                  placeholder="Title..." 
+                  autoFocus 
+                  className={`w-full px-6 py-4 bg-black/5 border-2 border-transparent rounded-2xl ${t.focusBorder} transition-all font-bold text-lg focus:outline-none`} 
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -404,8 +412,9 @@ interface EventBarProps {
 }
 
 const EventBar: React.FC<EventBarProps> = ({ event, isSplitStart, isSplitEnd, onEdit, onResize, themeStyles: t, isResizing }) => {
-  const truncatedTitle = useMemo(() => {
-    return event.title.length > 15 ? event.title.substring(0, 15) : event.title;
+  // Enforce 15 chars
+  const displayTitle = useMemo(() => {
+    return event.title.substring(0, 15);
   }, [event.title]);
 
   return (
@@ -420,18 +429,18 @@ const EventBar: React.FC<EventBarProps> = ({ event, isSplitStart, isSplitEnd, on
         `}
         style={{ width: 'max-content', minWidth: 'max-content' }}
       >
-        <div className="flex items-center gap-3 whitespace-nowrap overflow-hidden pr-2">
-          <span className={`text-[12px] font-black ${t.text} uppercase tracking-tight`}>{truncatedTitle}</span>
+        <div className="flex items-center gap-3 whitespace-nowrap overflow-hidden pr-4">
+          <span className={`text-[12px] font-black ${t.text} uppercase tracking-tight`}>{displayTitle}</span>
         </div>
         
-        {/* Drag out handle */}
+        {/* Resize/Extend handle */}
         {!isSplitEnd && (
           <div 
             onMouseDown={(e) => onResize(event, e)} 
-            className="absolute right-0 inset-y-0 w-6 cursor-col-resize group/handle flex items-center justify-end z-20 pointer-events-auto pr-1"
-            title="Drag to extend"
+            className="absolute right-0 inset-y-0 w-8 cursor-col-resize group/handle flex items-center justify-end z-20 pointer-events-auto pr-1"
+            title="Drag to extend event duration"
           >
-            <div className={`w-1 h-1/2 rounded-full ${t.primary} opacity-20 group-hover/handle:opacity-100 transition-all`} />
+            <div className={`w-1.5 h-1/2 rounded-full ${t.primary} opacity-20 group-hover/handle:opacity-100 transition-all shadow-sm`} />
           </div>
         )}
       </div>
