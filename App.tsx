@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { X, Calendar as CalendarIcon, ArrowRight, Trash2, Maximize2, Minimize2, Target, ZoomIn, ZoomOut } from 'lucide-react';
-import { format, addDays, isBefore, differenceInDays } from 'date-fns';
+import { format, addDays, isBefore } from 'date-fns';
 import type { DateItem, TimelineEvent } from './types';
 import { generateDates, getInitialDates } from './utils/dateUtils';
 
@@ -95,11 +95,16 @@ const App: React.FC = () => {
       const daysDelta = Math.round(deltaX / currentWidth);
       const currentEvent = events.find(ev => ev.id === resizingEventId);
       if (!currentEvent) return;
+      
       const newEndDate = format(addDays(parseISODate(initialEndDate.current), daysDelta), 'yyyy-MM-dd');
+      
       if (isBefore(parseISODate(newEndDate), parseISODate(currentEvent.startDate))) return;
+      
       setEvents(prev => prev.map(ev => ev.id === resizingEventId ? { ...ev, endDate: newEndDate } : ev));
     };
+
     const handleMouseUp = () => setResizingEventId(null);
+
     if (resizingEventId) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
@@ -118,23 +123,30 @@ const App: React.FC = () => {
     if (todayEl) {
       if (viewMode === 'line') {
         const centerOffset = (container.clientWidth / 2) - (LINE_COLUMN_WIDTH / 2);
-        container.scrollTo({ left: todayEl.offsetLeft - centerOffset, behavior: isInitialScrollDone.current ? 'smooth' : 'auto' });
+        container.scrollTo({ 
+          left: todayEl.offsetLeft - centerOffset, 
+          behavior: isInitialScrollDone.current ? 'smooth' : 'auto' 
+        });
       } else {
         const centerOffset = (container.clientHeight / 2) - (GRID_ROW_HEIGHT / 2);
-        container.scrollTo({ top: todayEl.offsetTop - centerOffset, behavior: isInitialScrollDone.current ? 'smooth' : 'auto' });
+        container.scrollTo({ 
+          top: todayEl.offsetTop - centerOffset, 
+          behavior: isInitialScrollDone.current ? 'smooth' : 'auto' 
+        });
       }
       isInitialScrollDone.current = true;
     }
   }, [viewMode]);
 
   useEffect(() => { 
-    const timer = setTimeout(scrollToToday, 250); 
+    const timer = setTimeout(scrollToToday, 500); 
     return () => clearTimeout(timer);
   }, [dates, viewMode, scrollToToday]);
 
   const handleScroll = useCallback(() => {
     if (!scrollContainerRef.current) return;
     const { scrollLeft, scrollWidth, clientWidth, scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+    
     if (viewMode === 'line') {
       if (scrollLeft + clientWidth > scrollWidth - 1200) {
         const lastDate = dates[dates.length - 1].date;
@@ -248,7 +260,7 @@ const App: React.FC = () => {
               </div>
               <div className="hidden sm:block">
                 <h1 className={`text-lg sm:text-2xl font-black ${t.text} tracking-tight leading-none`}>Timeline</h1>
-                <p className={`text-[8px] sm:text-[10px] font-bold ${t.mutedText} uppercase tracking-widest mt-1 sm:mt-1.5`}>Vite Optimized</p>
+                <p className={`text-[8px] sm:text-[10px] font-bold ${t.mutedText} uppercase tracking-widest mt-1.5`}>Production Built</p>
               </div>
             </div>
             
@@ -412,14 +424,12 @@ interface EventBarProps {
 }
 
 const EventBar: React.FC<EventBarProps> = ({ event, isSplitStart, isSplitEnd, onEdit, onResize, themeStyles: t, isResizing }) => {
-  // Enforce 15 chars
   const displayTitle = useMemo(() => {
     return event.title.substring(0, 15);
   }, [event.title]);
 
   return (
     <div className={`relative h-full flex items-center group transition-transform ${isResizing ? 'scale-y-[1.1]' : ''}`}>
-      {/* Main Bubble */}
       <div 
         onClick={(e) => onEdit(event, e)}
         className={`absolute left-0 z-10 h-full flex items-center pointer-events-auto cursor-pointer ${t.containerBg} border border-black/10 px-4 py-1 shadow-md border-l-4 ${t.barBorder} transition-all 
@@ -433,12 +443,11 @@ const EventBar: React.FC<EventBarProps> = ({ event, isSplitStart, isSplitEnd, on
           <span className={`text-[12px] font-black ${t.text} uppercase tracking-tight`}>{displayTitle}</span>
         </div>
         
-        {/* Resize/Extend handle */}
         {!isSplitEnd && (
           <div 
             onMouseDown={(e) => onResize(event, e)} 
             className="absolute right-0 inset-y-0 w-8 cursor-col-resize group/handle flex items-center justify-end z-20 pointer-events-auto pr-1"
-            title="Drag to extend event duration"
+            title="Drag to extend duration"
           >
             <div className={`w-1.5 h-1/2 rounded-full ${t.primary} opacity-20 group-hover/handle:opacity-100 transition-all shadow-sm`} />
           </div>
